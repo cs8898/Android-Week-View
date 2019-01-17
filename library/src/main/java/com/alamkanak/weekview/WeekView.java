@@ -27,6 +27,7 @@ import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.text.style.StyleSpan;
 import android.util.AttributeSet;
+import android.util.SparseArray;
 import android.util.TypedValue;
 import android.view.DragEvent;
 import android.view.GestureDetector;
@@ -40,11 +41,14 @@ import android.widget.OverScroller;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import static com.alamkanak.weekview.WeekViewUtil.daysBetween;
 import static com.alamkanak.weekview.WeekViewUtil.getPassedMinutesInDay;
@@ -174,6 +178,7 @@ public class WeekView extends View {
     private boolean mAutoLimitTime = false;
     private boolean mEnableDropListener = false;
     private int mMinOverlappingMinutes = 0;
+    private boolean mPriorityOrdering = false;
 
     // Listeners.
     private EventClickListener mEventClickListener;
@@ -495,6 +500,7 @@ public class WeekView extends View {
             if (a.getBoolean(R.styleable.WeekView_dropListenerEnabled, false))
                 this.enableDropListener();
             mMinOverlappingMinutes = a.getInt(R.styleable.WeekView_minOverlappingMinutes, 0);
+            mPriorityOrdering = a.getBoolean(R.styleable.WeekView_priorityOrdering, mPriorityOrdering);
         } finally {
             a.recycle();
         }
@@ -1408,12 +1414,23 @@ public class WeekView extends View {
      *
      * @param eventRects The events along with their wrapper class.
      */
+    /*
+        Priority Enabled: priorityCollisionMap for each priority in prioritySet
+        priorityCollisionMap<Integer,List<List<EventRect>>>
+     */
     private void computePositionOfEvents(List<EventRect> eventRects) {
         // Make "collision groups" for all events that collide with others.
-        List<List<EventRect>> collisionGroups = new ArrayList<List<EventRect>>();
+        SparseArray<List<List<EventRect>>> priorityCollisionMap = new SparseArray<>();
+        //List<List<EventRect>> collisionGroups = new ArrayList<List<EventRect>>();
         for (EventRect eventRect : eventRects) {
             boolean isPlaced = false;
+            int priority = eventRect.originalEvent.getPriority();
 
+            List<List<EventRect>> collisionGroups = priorityCollisionMap.get(priority,null);
+            if(collisionGroups==null){
+                collisionGroups = new ArrayList<>();
+                priorityCollisionMap.put(priority,collisionGroups);
+            }
             outerLoop:
             for (List<EventRect> collisionGroup : collisionGroups) {
                 for (EventRect groupEvent : collisionGroup) {
@@ -1431,9 +1448,71 @@ public class WeekView extends View {
                 collisionGroups.add(newGroup);
             }
         }
+        //if(mPriorityOrdering) {
+            int[] sortedPrioritys = new int[priorityCollisionMap.size()];
+            for (int i = 0; i < priorityCollisionMap.size(); i++) {
+                sortedPrioritys[i] = priorityCollisionMap.keyAt(i);
+            }
+            Arrays.sort(sortedPrioritys);
+            for(int i = 0; i < sortedPrioritys.length; i++) {
+                List<List<EventRect>> collisionGroups = priorityCollisionMap.get(sortedPrioritys[i]);
+                for (List<EventRect> collisionGroup : collisionGroups)
+                    expandEventsToMaxWidth(collisionGroup, i, sortedPrioritys.length);
+            }
+        //}
+    }
 
-        for (List<EventRect> collisionGroup : collisionGroups) {
-            expandEventsToMaxWidth(collisionGroup);
+    private void expandEventsToMaxWidth(List<EventRect> collisionGroup, int index, int length) {
+        List<List<EventRect>> columns = new ArrayList<List<EventRect>>();
+        columns.add(new ArrayList<EventRect>());
+        for (EventRect eventRect : collisionGroup) {
+            boolean isPlaced = false;
+            for (List<EventRect> column : columns) {
+                if (column.size() == 0) {
+                    column.add(eventRect);
+                    isPlaced = true;
+                } else if (!isEventsCollide(eventRect.event, column.get(column.size() - 1).event)) {
+                    column.add(eventRect);
+                    isPlaced = true;
+                    break;
+                }
+            }
+            if (!isPlaced) {
+                List<EventRect> newColumn = new ArrayList<EventRect>();
+                newColumn.add(eventRect);
+                columns.add(newColumn);
+            }
+        }
+
+        // Calculate left and right position for all the events.
+        // Get the maxRowCount by looking in all columns.
+        int maxRowCount = 0;
+        for (List<EventRect> column : columns) {
+            maxRowCount = Math.max(maxRowCount, column.size());
+        }
+        for (int i = 0; i < maxRowCount; i++) {
+            // Set the left and right values of the event.
+            float j = 0;
+            for (List<EventRect> column : columns) {
+                if (column.size() >= i + 1) {
+                    EventRect eventRect = column.get(i);
+                    float priorityWidth = 1f/length;
+                    //eventRect.width = 1f / columns.size();
+                    eventRect.width = priorityWidth / columns.size();
+                    float priorityOffSet = index*priorityWidth;
+                    //eventRect.left = j / columns.size();
+                    eventRect.left = index*priorityWidth+(priorityWidth*j*1/columns.size());
+                    if (!eventRect.event.isAllDay()) {
+                        eventRect.top = getPassedMinutesInDay(eventRect.event.getStartTime());
+                        eventRect.bottom = getPassedMinutesInDay(eventRect.event.getEndTime());
+                    } else {
+                        eventRect.top = 0;
+                        eventRect.bottom = mAllDayEventHeight;
+                    }
+                    mEventRects.add(eventRect);
+                }
+                j++;
+            }
         }
     }
 
@@ -1443,6 +1522,22 @@ public class WeekView extends View {
      *
      * @param collisionGroup The group of events which overlap with each other.
      */
+    //TODO introduce Prioritys probably before the whole addition
+    /*
+    priorityCollisionMap<Integer,List<List<EventRect>>>
+    if (mPriorityOrdering) {
+        prioritySet = prioritys ocurring on a single Day
+        Set the left based on the index in the sorted priority set
+        set the column width to the size of the priority set
+    } else {
+        left stays same
+        prioritySet is empty
+        column width stays untouched
+    }
+    introduce a priorityColumnList
+    //enabled: contains prioritySet.size() List<List<EventRect>> entries
+    //disabled: contains 1 List<List<EventRect>> Entry
+    */
     private void expandEventsToMaxWidth(List<EventRect> collisionGroup) {
         // Expand the events to maximum possible width.
         List<List<EventRect>> columns = new ArrayList<List<EventRect>>();
@@ -2535,6 +2630,15 @@ public class WeekView extends View {
 
     public int getMinOverlappingMinutes() {
         return this.mMinOverlappingMinutes;
+    }
+
+    public void setPriorityOrdering(boolean priorityOrdering){
+        this.mPriorityOrdering = priorityOrdering;
+        invalidate();
+    }
+
+    public boolean getPriorityOrdering(){
+        return this.mPriorityOrdering;
     }
 
     /////////////////////////////////////////////////////////////////
