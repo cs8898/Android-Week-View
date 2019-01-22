@@ -3,6 +3,8 @@ package com.alamkanak.weekview.sample;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.TextView;
 
 import com.alamkanak.weekview.TextColorPicker;
 import com.alamkanak.weekview.WeekViewEvent;
@@ -22,7 +24,6 @@ public class PriorityActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mWeekView.setPriorityOrdering(true);
         Typeface customTypeface = Typeface.createFromAsset(this.getAssets(), "fonts/Raleway/Raleway-Medium.ttf");
         mWeekView.setTypeface(customTypeface);
         mWeekView.setTextColorPicker(new TextColorPicker() {
@@ -31,6 +32,26 @@ public class PriorityActivity extends BaseActivity {
                 int color = event.getColor();
                 double a = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
                 return a < 0.2 ? Color.BLACK : Color.WHITE;
+            }
+        });
+
+        TextView mDragableView = findViewById(R.id.draggable_view);
+        mDragableView.setText(getString(R.string.toggle_priority));
+        mWeekView.setPriorityOrdering(true);
+        mDragableView.setBackgroundColor(Color.GREEN);
+        mDragableView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (v.getId() == R.id.draggable_view){
+                    if (mWeekView.getPriorityOrdering()) {
+                        mWeekView.setPriorityOrdering(false);
+                        v.setBackgroundColor(Color.RED);
+                    } else {
+                        mWeekView.setPriorityOrdering(true);
+                        v.setBackgroundColor(Color.GREEN);
+                    }
+                    mWeekView.notifyDatasetChanged();
+                }
             }
         });
     }
@@ -59,8 +80,8 @@ public class PriorityActivity extends BaseActivity {
         //startTime = (Calendar) startTime.clone();
         //endTime = (Calendar) endTime.clone();
         event = new WeekViewEvent("event1A","P1 Evnt A","SOME LOCATION",startTime,endTime,true);
-        event.setColor(colors[0]);
-        event.setPriority(0);
+        event.setColor(colors[1]);
+        event.setPriority(1);
         events.add(event);
 
         startTime = (Calendar) startTime.clone();

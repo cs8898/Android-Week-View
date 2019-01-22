@@ -1424,12 +1424,12 @@ public class WeekView extends View {
         //List<List<EventRect>> collisionGroups = new ArrayList<List<EventRect>>();
         for (EventRect eventRect : eventRects) {
             boolean isPlaced = false;
-            int priority = eventRect.originalEvent.getPriority();
+            int priority = (mPriorityOrdering ? eventRect.originalEvent.getPriority() : -1);
 
-            List<List<EventRect>> collisionGroups = priorityCollisionMap.get(priority,null);
-            if(collisionGroups==null){
+            List<List<EventRect>> collisionGroups = priorityCollisionMap.get(priority, null);
+            if (collisionGroups == null) {
                 collisionGroups = new ArrayList<>();
-                priorityCollisionMap.put(priority,collisionGroups);
+                priorityCollisionMap.put(priority, collisionGroups);
             }
             outerLoop:
             for (List<EventRect> collisionGroup : collisionGroups) {
@@ -1449,16 +1449,17 @@ public class WeekView extends View {
             }
         }
         //if(mPriorityOrdering) {
-            int[] sortedPrioritys = new int[priorityCollisionMap.size()];
-            for (int i = 0; i < priorityCollisionMap.size(); i++) {
-                sortedPrioritys[i] = priorityCollisionMap.keyAt(i);
-            }
-            Arrays.sort(sortedPrioritys);
-            for(int i = 0; i < sortedPrioritys.length; i++) {
-                List<List<EventRect>> collisionGroups = priorityCollisionMap.get(sortedPrioritys[i]);
-                for (List<EventRect> collisionGroup : collisionGroups)
-                    expandEventsToMaxWidth(collisionGroup, i, sortedPrioritys.length);
-            }
+        //TODO Probably Not needed...
+        int[] sortedPriorities = new int[priorityCollisionMap.size()];
+        for (int i = 0; i < priorityCollisionMap.size(); i++) {
+            sortedPriorities[i] = priorityCollisionMap.keyAt(i);
+        }
+        Arrays.sort(sortedPriorities);
+        for (int i = 0; i < sortedPriorities.length; i++) {
+            List<List<EventRect>> collisionGroups = priorityCollisionMap.get(sortedPriorities[i]);
+            for (List<EventRect> collisionGroup : collisionGroups)
+                expandEventsToMaxWidth(collisionGroup, i, sortedPriorities.length);
+        }
         //}
     }
 
@@ -1496,12 +1497,11 @@ public class WeekView extends View {
             for (List<EventRect> column : columns) {
                 if (column.size() >= i + 1) {
                     EventRect eventRect = column.get(i);
-                    float priorityWidth = 1f/length;
+                    float priorityWidth = 1f / length;
                     //eventRect.width = 1f / columns.size();
                     eventRect.width = priorityWidth / columns.size();
-                    float priorityOffSet = index*priorityWidth;
                     //eventRect.left = j / columns.size();
-                    eventRect.left = index*priorityWidth+(priorityWidth*j*1/columns.size());
+                    eventRect.left = index * priorityWidth + (priorityWidth * j * 1 / columns.size());
                     if (!eventRect.event.isAllDay()) {
                         eventRect.top = getPassedMinutesInDay(eventRect.event.getStartTime());
                         eventRect.bottom = getPassedMinutesInDay(eventRect.event.getEndTime());
@@ -1538,7 +1538,7 @@ public class WeekView extends View {
     //enabled: contains prioritySet.size() List<List<EventRect>> entries
     //disabled: contains 1 List<List<EventRect>> Entry
     */
-    private void expandEventsToMaxWidth(List<EventRect> collisionGroup) {
+    /*private void expandEventsToMaxWidth(List<EventRect> collisionGroup) {
         // Expand the events to maximum possible width.
         List<List<EventRect>> columns = new ArrayList<List<EventRect>>();
         columns.add(new ArrayList<EventRect>());
@@ -1587,7 +1587,7 @@ public class WeekView extends View {
                 j++;
             }
         }
-    }
+    }*/
 
     /**
      * Checks if two events overlap.
@@ -2632,12 +2632,12 @@ public class WeekView extends View {
         return this.mMinOverlappingMinutes;
     }
 
-    public void setPriorityOrdering(boolean priorityOrdering){
+    public void setPriorityOrdering(boolean priorityOrdering) {
         this.mPriorityOrdering = priorityOrdering;
         invalidate();
     }
 
-    public boolean getPriorityOrdering(){
+    public boolean getPriorityOrdering() {
         return this.mPriorityOrdering;
     }
 
