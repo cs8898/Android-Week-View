@@ -13,12 +13,18 @@ public class MonthLoader implements WeekViewLoader {
 
     @Override
     public double toWeekViewPeriodIndex(Calendar instance) {
-        return instance.get(Calendar.YEAR) * 12 + instance.get(Calendar.MONTH) + (instance.get(Calendar.DAY_OF_MONTH) - 1) / 30.0;
+        return instance.get(Calendar.YEAR) * 12 + instance.get(Calendar.MONTH) + (instance.get(Calendar.DAY_OF_MONTH) - 1) / (double) instance.getMaximum(Calendar.DAY_OF_MONTH);
     }
 
     @Override
     public List<? extends WeekViewEvent> onLoad(int periodIndex) {
-        return mOnMonthChangeListener.onMonthChange(periodIndex / 12, periodIndex % 12 + 1);
+        List<? extends WeekViewEvent> prev = mOnMonthChangeListener.onMonthChange((periodIndex - 1) / 12, (periodIndex - 1) % 12 + 1);
+        List cur = mOnMonthChangeListener.onMonthChange(periodIndex / 12, periodIndex % 12 + 1);
+        List next = mOnMonthChangeListener.onMonthChange((periodIndex + 1) / 12, (periodIndex + 1) % 12 + 1);
+        prev.addAll(cur);
+        prev.addAll(next);
+        //return mOnMonthChangeListener.onMonthChange(periodIndex / 12, periodIndex % 12 + 1);
+        return prev;
     }
 
     public MonthChangeListener getOnMonthChangeListener() {
