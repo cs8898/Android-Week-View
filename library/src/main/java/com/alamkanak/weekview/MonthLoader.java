@@ -18,13 +18,7 @@ public class MonthLoader implements WeekViewLoader {
 
     @Override
     public List<? extends WeekViewEvent> onLoad(int periodIndex) {
-        List<? extends WeekViewEvent> prev = mOnMonthChangeListener.onMonthChange((periodIndex - 1) / 12, (periodIndex - 1) % 12 + 1);
-        List cur = mOnMonthChangeListener.onMonthChange(periodIndex / 12, periodIndex % 12 + 1);
-        List next = mOnMonthChangeListener.onMonthChange((periodIndex + 1) / 12, (periodIndex + 1) % 12 + 1);
-        prev.addAll(cur);
-        prev.addAll(next);
-        //return mOnMonthChangeListener.onMonthChange(periodIndex / 12, periodIndex % 12 + 1);
-        return prev;
+        return mOnMonthChangeListener.onMonthChange(periodIndex / 12, periodIndex % 12 + 1);
     }
 
     public MonthChangeListener getOnMonthChangeListener() {

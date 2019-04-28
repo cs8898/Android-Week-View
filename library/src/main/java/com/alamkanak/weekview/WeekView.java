@@ -14,11 +14,13 @@ import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
+
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.view.GestureDetectorCompat;
 import androidx.core.view.ViewCompat;
 import androidx.interpolator.view.animation.FastOutLinearInInterpolator;
+
 import android.text.Layout;
 import android.text.SpannableStringBuilder;
 import android.text.StaticLayout;
@@ -1313,10 +1315,19 @@ public class WeekView extends View {
         if (mWeekViewLoader != null) {
             int periodToFetch = (int) mWeekViewLoader.toWeekViewPeriodIndex(day);
             if (!isInEditMode() && (mFetchedPeriod < 0 || mFetchedPeriod != periodToFetch || mRefreshEvents)) {
-                List<? extends WeekViewEvent> newEvents = mWeekViewLoader.onLoad(periodToFetch);
-
+                int nextToCachePeriod = periodToFetch;
+                if (mFetchedPeriod >= 0)
+                    nextToCachePeriod += mFetchedPeriod < periodToFetch ? 1 : -1;
+                List<? extends WeekViewEvent> newEvents = mWeekViewLoader.onLoad(nextToCachePeriod);
+                // Fetch surrounding Periods
+                if (mFetchedPeriod == -1) {
+                    List prev = mWeekViewLoader.onLoad(periodToFetch - 1);
+                    List next = mWeekViewLoader.onLoad(periodToFetch + 1);
+                    newEvents.addAll(prev);
+                    newEvents.addAll(next);
+                }
                 // Clear events.
-                this.clearEvents();
+                this.cleanCachedEvents(mFetchedPeriod, periodToFetch);
                 cacheAndSortEvents(newEvents);
                 calculateHeaderHeight();
 
@@ -1354,6 +1365,32 @@ public class WeekView extends View {
     private void clearEvents() {
         mEventRects.clear();
         mEvents.clear();
+    }
+
+    /**
+     * Always store three Periods and only drop Unused Ones
+     *
+     * @param oldPeriod lastFetchedPeriod
+     * @param newPeriod newPeriod
+     */
+    private void cleanCachedEvents(int oldPeriod, int newPeriod) {
+        if (oldPeriod < 0)
+            return;
+        int deletePeriod = oldPeriod > newPeriod ? oldPeriod + 1 : oldPeriod - 1;
+        for (int i = 0; i < mEventRects.size(); i++) {
+            int eventPeriod = (int) mWeekViewLoader.toWeekViewPeriodIndex(
+                    mEventRects.get(i).event.getStartTime()
+            );
+            if (deletePeriod == eventPeriod)
+                mEventRects.remove(i--);
+        }
+        for (int i = 0; i < mEvents.size(); i++) {
+            int eventPeriod = (int) mWeekViewLoader.toWeekViewPeriodIndex(
+                    mEvents.get(i).getStartTime()
+            );
+            if (deletePeriod == eventPeriod)
+                mEvents.remove(i--);
+        }
     }
 
     /**
