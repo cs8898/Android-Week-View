@@ -13,7 +13,7 @@ public class MonthLoader implements WeekViewLoader {
 
     @Override
     public double toWeekViewPeriodIndex(Calendar instance) {
-        return instance.get(Calendar.YEAR) * 12 + instance.get(Calendar.MONTH) + (instance.get(Calendar.DAY_OF_MONTH) - 1) / (double) instance.getMaximum(Calendar.DAY_OF_MONTH);
+        return instance.get(Calendar.YEAR) * 12 + instance.get(Calendar.MONTH) + (instance.get(Calendar.DAY_OF_MONTH) - 1) / (double) instance.getActualMaximum(Calendar.DAY_OF_MONTH);
     }
 
     @Override
