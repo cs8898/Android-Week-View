@@ -304,13 +304,15 @@ public class WeekViewEvent {
         return mId.hashCode();
     }
 
-    public List<WeekViewEvent> splitWeekViewEvents() {
+    public List<WeekViewEvent> splitWeekViewEvents(WeekView context) {
         //This function splits the WeekViewEvent in WeekViewEvents by day
         List<WeekViewEvent> events = new ArrayList<WeekViewEvent>();
         // The first millisecond of the next day is still the same day. (no need to split events for this).
         Calendar endTime = (Calendar) this.getEndTime().clone();
         endTime.add(Calendar.MILLISECOND, -1);
-        if (!isSameDay(this.getStartTime(), endTime)) {
+
+        //android.util.Log.d("SameDay",String.valueOf(isSameDay(context, this.getStartTime(), endTime)));
+        if (!isSameDay(context, this.getStartTime(), endTime)) {
             endTime = (Calendar) this.getStartTime().clone();
             endTime.set(Calendar.HOUR_OF_DAY, 23);
             endTime.set(Calendar.MINUTE, 59);
@@ -322,7 +324,7 @@ public class WeekViewEvent {
             // Add other days.
             Calendar otherDay = (Calendar) this.getStartTime().clone();
             otherDay.add(Calendar.DATE, 1);
-            while (!isSameDay(otherDay, this.getEndTime())) {
+            while (!isSameDay(context, otherDay, this.getEndTime())) {
                 Calendar overDay = (Calendar) otherDay.clone();
                 overDay.set(Calendar.HOUR_OF_DAY, 0);
                 overDay.set(Calendar.MINUTE, 0);

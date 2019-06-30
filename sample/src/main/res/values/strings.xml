@@ -11,4 +11,5 @@
     <string name="async_error">Could not download events from the internet</string>
     <string name="drag_me">Drag Me</string>
     <string name="toggle_priority">Toggle Priority Ordering</string>
+    <string name="title_activity_limited">Limited HourView</string>
 </resources>

@@ -28,6 +28,9 @@
         <activity
             android:name=".PriorityActivity"
             android:label="@string/title_activity_priority" />
+        <activity
+            android:name=".LimitedActivity"
+            android:label="@string/title_activity_limited" />
     </application>
 
 </manifest>
